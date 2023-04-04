@@ -15,6 +15,13 @@ impl Tile {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum BoardStatus {
+    Winner(Tile),
+    Tie,
+    Continue,
+}
+
 pub struct Board {
     tiles: Vec<Vec<Tile>>,
     win_row_length: usize,
@@ -67,22 +74,7 @@ impl Board {
         Ok(())
     }
 
-    pub fn make_random_move(&mut self, side: Tile) {
-        use rand::seq::SliceRandom;
-
-        let mut empty_tiles: Vec<&mut Tile> = self.tiles
-            .iter_mut()
-            .flatten()
-            .filter(|t| **t == Tile::Empty)
-            .collect();
-
-        **empty_tiles
-            .choose_mut(&mut rand::thread_rng())
-            .unwrap()
-            = side;
-    }
-
-    pub fn find_winner(&self) -> Option<Tile> {
+    pub fn board_status(&self) -> BoardStatus {
         for row in 0..self.tiles.len() {
             for col in 0..self.tiles[row].len() {
                 let lines = [
@@ -98,13 +90,26 @@ impl Board {
                 ];
 
                 for l in lines {
-                    if l.iter().all(|t| *t == Some(Tile::Cross )) {return Some(Tile::Cross);}
-                    if l.iter().all(|t| *t == Some(Tile::Nought)) {return Some(Tile::Nought);}
+                    if l.iter().all(|t| *t == Some(Tile::Cross )) {
+                        return BoardStatus::Winner(Tile::Cross);
+                    }
+                    if l.iter().all(|t| *t == Some(Tile::Nought)) {
+                        return BoardStatus::Winner(Tile::Nought);
+                    }
                 }
             }
         }
+
+        let is_tie = !self.tiles
+            .iter()
+            .flatten()
+            .any(|tile| *tile == Tile::Empty);
         
-        return None;
+        if is_tie {
+            return BoardStatus::Tie;
+        }
+
+        return BoardStatus::Continue;
         
         fn get_line(
             self_board: &Board,
@@ -120,14 +125,33 @@ impl Board {
             }).collect()
         }
     }
+
+    pub fn make_random_move(&mut self, side: Tile) {
+        use rand::seq::SliceRandom;
+
+        let mut empty_tiles: Vec<&mut Tile> = self.tiles
+            .iter_mut()
+            .flatten()
+            .filter(|t| **t == Tile::Empty)
+            .collect();
+
+        **empty_tiles
+            .choose_mut(&mut rand::thread_rng())
+            .unwrap()
+            = side;
+    }
+    
+    pub fn make_perfect_move(&mut self, side: Tile) {
+
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Tile::*, Board};
+    use super::{Tile::*, BoardStatus::*, Board};
 
     #[test]
-    fn find_winner() {
+    fn board_status() {
         let mut b = Board::new(3, 3);
 
         b.tiles = vec![
@@ -135,22 +159,28 @@ mod tests {
             vec![Nought, Cross, Empty],
             vec![Nought, Empty, Cross],
         ];
-        assert_eq!(b.find_winner(), Some(Cross));
+        assert_eq!(b.board_status(), Winner(Cross));
 
         b.tiles = vec![
             vec![Cross, Nought, Cross],
             vec![Cross, Nought, Empty],
             vec![Nought, Cross, Cross],
         ];
-        assert_eq!(b.find_winner(), None);
+        assert_eq!(b.board_status(), Continue);
 
         b.tiles = vec![
             vec![ Cross, Nought,  Cross],
             vec![Nought, Nought, Nought],
             vec![ Cross,  Cross,  Empty],
         ];
-        assert_eq!(b.find_winner(), Some(Nought));
+        assert_eq!(b.board_status(), Winner(Nought));
 
+        b.tiles = vec![
+            vec![ Cross, Nought,  Cross],
+            vec![Nought,  Cross, Nought],
+            vec![Nought,  Cross, Nought],
+        ];
+        assert_eq!(b.board_status(), Tie);
 
 
         let mut b2 = Board::new(4, 2);
@@ -160,7 +190,7 @@ mod tests {
             vec![ Empty,  Empty,  Empty, Cross],
             vec![ Nought,  Cross, Empty, Nought],
         ];
-        assert_eq!(b2.find_winner(), None);
+        assert_eq!(b2.board_status(), Continue);
 
         b2.tiles = vec![
             vec![ Cross, Empty,  Cross, Empty],
@@ -168,6 +198,6 @@ mod tests {
             vec![ Cross,  Empty,  Empty, Empty],
             vec![ Nought,  Cross, Empty, Cross],
         ];
-        assert_eq!(b2.find_winner(), Some(Cross));
+        assert_eq!(b2.board_status(), Winner(Cross));
     }
 }

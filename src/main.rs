@@ -1,5 +1,5 @@
 mod board;
-use board::{Board, Tile::{*, self}};
+use board::{Board, Tile::{*, self}, BoardStatus};
 use std::{thread::sleep, time::Duration};
 
 const RESPONSE_PAUSE: Duration = Duration::from_millis(800);
@@ -40,9 +40,16 @@ fn main() {
 
             sleep(RESPONSE_PAUSE);
 
-            if let Some(tile) = b.find_winner() {
-                println!("{:?} has won!", tile);
-                return;
+            match b.board_status() {
+                BoardStatus::Winner(tile) => {
+                    println!("{:?} has won!", tile);
+                    return;
+                }
+                BoardStatus::Tie => {
+                    println!("Tie!");
+                    return;
+                }
+                BoardStatus::Continue => ()
             }
         }
     }
