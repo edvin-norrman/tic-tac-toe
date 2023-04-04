@@ -7,19 +7,22 @@ const RESPONSE_PAUSE: Duration = Duration::from_millis(800);
 enum Player {
     Human(Tile),
     RandomAi(Tile),
+    OptimalAi(Tile),
 }
 impl Player {
     fn make_move(&self, board: &mut Board) {
         match self {
-            Self::Human(tile)    => ensure_human_move(board, *tile),
-            Self::RandomAi(tile) => board.make_random_move(*tile),
+            Self::Human(tile)     => ensure_human_move(board, *tile),
+            Self::RandomAi(tile)  => board.make_random_move(*tile),
+            Self::OptimalAi(tile) => board.make_perfect_move(*tile),
         }
     }
 
     fn tile(&self) -> Tile {
         match self {
-            Self::Human(tile)    => *tile,
-            Self::RandomAi(tile) => *tile,
+            Self::Human(tile)     => *tile,
+            Self::RandomAi(tile)  => *tile,
+            Self::OptimalAi(tile) => *tile,
         }
     }
 }
@@ -29,7 +32,7 @@ fn main() {
 
     let players = [
         Player::Human(Cross),
-        Player::RandomAi(Nought),
+        Player::OptimalAi(Nought),
     ];
 
     loop {

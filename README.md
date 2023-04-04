@@ -1,2 +1,4 @@
 # tick-tack-toe
-A cli ticka tack toe game made in rust with an optimal ai opponent.
+Tick tack toe playable in the console against a perfect AI opponent.
+
+Cordinates for moves should be written with two numbers separated by a ',' e.g. "1, 2".

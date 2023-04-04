@@ -1,4 +1,7 @@
 
+use itertools::Itertools;
+
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Tile {
     Empty,
@@ -13,6 +16,14 @@ impl Tile {
             Self::Nought => "O",
         }
     }
+
+    pub fn opposite(&self) -> Option<Tile> {
+        match &self {
+            Self::Cross => Some(Self::Nought),
+            Self::Nought => Some(Self::Cross),
+            Self::Empty => None,
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -24,13 +35,15 @@ pub enum BoardStatus {
 
 pub struct Board {
     tiles: Vec<Vec<Tile>>,
+    length: usize,
     win_row_length: usize,
 }
 impl Board {
-    pub fn new(size: usize, win_row_length: usize) -> Self {
+    pub fn new(length: usize, win_row_length: usize) -> Self {
         Self {
-            tiles: vec![vec![Tile::Empty; size]; size],
-            win_row_length: win_row_length
+            tiles: vec![vec![Tile::Empty; length]; length],
+            length: length,
+            win_row_length: win_row_length,
         }
     }
 
@@ -75,8 +88,8 @@ impl Board {
     }
 
     pub fn board_status(&self) -> BoardStatus {
-        for row in 0..self.tiles.len() {
-            for col in 0..self.tiles[row].len() {
+        for row in 0..self.length {
+            for col in 0..self.length {
                 let lines = [
                     get_line(self, (row, col), ( 1,  0)),
                     get_line(self, (row, col), (-1,  0)),
@@ -142,8 +155,54 @@ impl Board {
     }
     
     pub fn make_perfect_move(&mut self, side: Tile) {
+        let move_at = (0..self.length).cartesian_product(0..self.length)
+            .filter(|(row, col)| self.get(*row, *col).unwrap() == Tile::Empty)
+            .collect::<Vec<(usize, usize)>>()
+            .iter()
+            .max_by(|pos1, pos2| {
+                self.value_of_move(side, pos1.0, pos1.1)
+                    .cmp(&self.value_of_move(side, pos2.0, pos2.1))
+            })
+            .unwrap()
+            .clone();
 
+        self.set(side, move_at.0, move_at.1).unwrap();
     }
+
+    // //Private function where row and col always should be correct.
+    fn value_of_move(&mut self, side: Tile, move_row: usize, move_col: usize) -> i8 {
+        const WIN_VALUE: i8 = 1;
+        const DRAW_VALUE: i8 = 0;
+        const LOOSE_VALUE: i8 = -1;
+
+        assert_eq!(self.get(move_row, move_col).unwrap(), Tile::Empty);
+        self.set(side, move_row, move_col).unwrap();
+
+        let value = match self.board_status() {
+            BoardStatus::Winner(tile) => {
+                if tile == side {WIN_VALUE}
+                else {LOOSE_VALUE}
+            },
+            BoardStatus::Tie => DRAW_VALUE,
+            BoardStatus::Continue => {
+                let opponent_move = (0..self.length).cartesian_product(0..self.length)
+                    .filter(|(row, col)| self.get(*row, *col).unwrap() == Tile::Empty)
+                    .collect::<Vec<(usize, usize)>>()
+                    .iter()
+                    .map(|(row, col)| self.value_of_move(side.opposite().unwrap(), *row, *col))
+                    .max()
+                    .unwrap();
+                
+                -opponent_move
+            }
+        };
+
+        self.tiles[move_row][move_col] = Tile::Empty;
+        value
+    }
+    // fn foo(cord: (usize, usize), b: &mut Board) {
+    //     b.value_of_move(side, move_row, move_col)
+    // }
 }
 
 #[cfg(test)]
